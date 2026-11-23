@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLF 2027 · Opérateurs — Analyse approfondie</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bleu:#000091; --bleu-clair:#e3e3fd; --bleu-hi:#1212ff;
+  --rouge:#E1000F; --rouge-clair:#ffe9e9;
+  --vert:#18753c; --vert-clair:#d4edda; --or:#ffb800; --or-fonce:#8a5e00;
+  --violet:#a855f7; --cyan:#06b6d4;
+  --gris-50:#f6f6f6; --gris-100:#eee; --gris-200:#e5e5e5; --gris-500:#929292; --gris-700:#3a3a3a; --gris-900:#1e1e1e;
+  --font-mono:'SF Mono',Menlo,Consolas,'Courier New',monospace;
+  --font-sans:'Marianne',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+body{font-family:var(--font-sans);background:var(--gris-50);color:var(--gris-900);font-size:13px;line-height:1.5}
+.bande{height:6px;background:linear-gradient(to right,var(--bleu) 0%,var(--bleu) 33.33%,#fff 33.33%,#fff 66.66%,var(--rouge) 66.66%,var(--rouge) 100%)}
+header{background:#fff;border-bottom:1px solid var(--gris-200);padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+header h1{font-size:16px;font-weight:800;color:var(--bleu);letter-spacing:.3px}
+header .sub{font-size:11px;color:var(--gris-500);font-family:var(--font-mono)}
+.badge{background:var(--bleu-clair);color:var(--bleu);font-family:var(--font-mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px}
+main{max-width:1500px;margin:0 auto;padding:20px}
+
+/* Insights */
+.insights{background:linear-gradient(135deg,#fff 0%,var(--bleu-clair) 100%);border:1px solid var(--bleu);border-radius:8px;padding:18px 22px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,145,.08)}
+.insights h2{font-size:13px;color:var(--bleu);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.insights h2::before{content:'';width:4px;height:14px;background:var(--rouge)}
+.insights ul{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:8px 20px}
+.insights li{font-size:12.5px;line-height:1.55;padding-left:20px;position:relative;color:var(--gris-900)}
+.insights li::before{content:'▸';position:absolute;left:4px;color:var(--bleu);font-weight:800}
+.insights .hl-red{color:var(--rouge);font-weight:700}
+.insights .hl-green{color:var(--vert);font-weight:700}
+.insights .hl-blue{color:var(--bleu);font-weight:700}
+.insights .hl-or{color:var(--or-fonce);font-weight:700}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:20px}
+.kpi{background:#fff;border:1px solid var(--gris-200);border-left:4px solid var(--bleu);border-radius:6px;padding:12px 14px;transition:transform .15s,box-shadow .15s}
+.kpi:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,145,.1)}
+.kpi.rouge{border-left-color:var(--rouge)} .kpi.vert{border-left-color:var(--vert)} .kpi.or{border-left-color:var(--or)}
+.kpi.violet{border-left-color:var(--violet)} .kpi.cyan{border-left-color:var(--cyan)}
+.kpi .label{font-size:9.5px;font-weight:700;color:var(--gris-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.kpi .value{font-size:20px;font-weight:800;color:var(--bleu);font-family:var(--font-mono);line-height:1.1;word-break:break-all}
+.kpi.rouge .value{color:var(--rouge)} .kpi.vert .value{color:var(--vert)} .kpi.or .value{color:var(--or-fonce)}
+.kpi.violet .value{color:var(--violet)} .kpi.cyan .value{color:var(--cyan)}
+.kpi .sub{font-size:9.5px;color:var(--gris-500);margin-top:3px;font-family:var(--font-mono)}
+
+/* Layout */
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+@media(max-width:900px){.charts{grid-template-columns:1fr}}
+.card{background:#fff;border:1px solid var(--gris-200);border-radius:6px;overflow:hidden;margin-bottom:20px}
+.card-head{padding:11px 14px;background:var(--gris-50);border-bottom:1px solid var(--gris-200);font-size:11px;font-weight:700;color:var(--bleu);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.card-head .title{display:flex;align-items:center;gap:8px}
+.card-head .title::before{content:'';width:4px;height:13px;background:var(--rouge)}
+.card-head .hint{font-size:10px;color:var(--gris-500);font-weight:400;text-transform:none;letter-spacing:0;font-family:var(--font-mono)}
+.card-body{padding:14px}
+.chart-container{position:relative;height:300px}
+.chart-container.tall{height:380px}
+
+/* Toolbar / table */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.toolbar input,.toolbar select{padding:8px 12px;border:1px solid var(--gris-200);border-radius:4px;font-size:13px;font-family:var(--font-sans);color:var(--gris-900);background:#fff}
+.toolbar input:focus,.toolbar select:focus{outline:none;border-color:var(--bleu);box-shadow:0 0 0 2px var(--bleu-clair)}
+.toolbar input{flex:1;min-width:200px}
+.export-btn{background:var(--bleu);color:#fff;border:none;padding:8px 16px;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font-sans)}
+.export-btn:hover{background:var(--bleu-hi)}
+.table-wrap{max-height:560px;overflow:auto;border:1px solid var(--gris-200);border-radius:6px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{position:sticky;top:0;background:var(--gris-50);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--gris-700);padding:10px 8px;border-bottom:2px solid var(--gris-200);text-align:left;white-space:nowrap;z-index:2;cursor:pointer;user-select:none}
+th:hover{background:var(--bleu-clair);color:var(--bleu)}
+th.num{text-align:right}
+td{padding:8px;border-bottom:1px solid var(--gris-100);vertical-align:top}
+tr:hover td{background:var(--bleu-clair)}
+.num{font-family:var(--font-mono);text-align:right;font-variant-numeric:tabular-nums}
+.evolution-pos{color:var(--vert);font-weight:700}
+.evolution-neg{color:var(--rouge);font-weight:700}
+.cat-badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:9.5px;font-weight:700;font-family:var(--font-mono);white-space:nowrap}
+.cat-hausse{background:var(--vert-clair);color:var(--vert)}
+.cat-baisse{background:var(--rouge-clair);color:var(--rouge)}
+.cat-stable{background:var(--gris-100);color:var(--gris-700)}
+.cat-nouveau{background:var(--bleu-clair);color:var(--bleu)}
+.cat-supprime{background:#2a0000;color:#fff}
+
+/* States */
+.spinner{width:36px;height:36px;border:3px solid var(--gris-200);border-top-color:var(--bleu);border-radius:50%;animation:spin .8s linear infinite;margin:60px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.erreur{background:var(--rouge-clair);border:1px solid var(--rouge);color:var(--rouge);padding:14px;border-radius:6px;font-size:13px;margin:20px 0}
+.hidden{display:none}
+footer{text-align:center;padding:24px;font-size:10px;color:var(--gris-500);font-family:var(--font-mono);border-top:1px solid var(--gris-200);margin-top:20px}
+</style>
+</head>
+<body>
+<div class="bande"></div>
+<header>
+  <h1>🇫🇷 PLF 2027 · Opérateurs</h1>
+  <span class="sub">PAP Opérateurs — analyse approfondie</span>
+  <span class="badge" id="badgeTotal">— lignes</span>
+</header>
+
+<main>
+  <div id="loading" class="spinner"></div>
+  <div id="erreur" class="erreur hidden"></div>
+
+  <!-- Insights générés automatiquement -->
+  <div id="insights" class="insights hidden">
+    <h2>Faits saillants</h2>
+    <ul id="insightsList"></ul>
+  </div>
+
+  <!-- KPIs étendus -->
+  <section class="kpis hidden" id="kpis"></section>
+
+  <!-- Row A : distribution + pareto -->
+  <section class="charts hidden" id="gridA">
+    <div class="card">
+      <div class="card-head"><div class="title">Distribution des évolutions</div><span class="hint">nb d'opérateurs par tranche</span></div>
+      <div class="card-body"><div class="chart-container"><canvas id="chartDistrib"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="title">Concentration (Pareto)</div><span class="hint">cumul % du budget</span></div>
+      <div class="card-body"><div class="chart-container"><canvas id="chartPareto"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- Row B : top gagnants / top perdants -->
+  <section class="charts hidden" id="gridB">
+    <div class="card">
+      <div class="card-head"><div class="title">Top 10 hausses (€)</div><span class="hint">variation absolue SCSP</span></div>
+      <div class="card-body"><div class="chart-container"><canvas id="chartGainers"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="title">Top 10 baisses (€)</div><span class="hint">variation absolue SCSP</span></div>
+      <div class="card-body"><div class="chart-container"><canvas id="chartLosers"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- Row C : scatter + ministères -->
+  <section class="charts hidden" id="gridC">
+    <div class="card">
+      <div class="card-head"><div class="title">Nuage LFI vs PLF</div><span class="hint">échelle log · taille = budget</span></div>
+      <div class="card-body"><div class="chart-container"><canvas id="chartScatter"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="title">Variation par ministère</div><span class="hint">variation % SCSP</span></div>
+      <div class="card-body"><div class="chart-container"><canvas id="chartMinist"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- Row D : top opérateurs + missions -->
+  <section class="charts hidden" id="gridD">
+    <div class="card">
+      <div class="card-head"><div class="title">Top 10 opérateurs PLF 2027</div></div>
+      <div class="card-body"><div class="chart-container"><canvas id="chartOp"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="title">Répartition par mission</div></div>
+      <div class="card-body"><div class="chart-container"><canvas id="chartMission"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- Analyse programmes -->
+  <section class="card hidden" id="progSection">
+    <div class="card-head"><div class="title">Programmes budgétaires les plus impactés</div><span class="hint">variation absolue PLF 2027 vs LFI 2026</span></div>
+    <div class="card-body"><div class="chart-container tall"><canvas id="chartProg"></canvas></div></div>
+  </section>
+
+  <!-- Table détaillée -->
+  <section class="card hidden" id="tableSection">
+    <div class="card-head"><div class="title">Tableau détaillé des opérateurs</div><span class="hint" id="tableCount">—</span></div>
+    <div class="card-body">
+      <div class="toolbar">
+        <input type="text" id="recherche" placeholder="🔍 Rechercher un opérateur, ministère, programme, mission…">
+        <select id="filtreMin"><option value="">Tous les ministères</option></select>
+        <select id="filtreCat">
+          <option value="">Toutes catégories</option>
+          <option value="hausse">🟢 Hausse</option>
+          <option value="baisse">🔴 Baisse</option>
+          <option value="stable">⚪ Stable</option>
+          <option value="nouveau">🆕 Nouveau</option>
+          <option value="supprime">❌ Supprimé</option>
+        </select>
+        <button class="export-btn" id="exportCsvBtn">📥 Export CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-sort="operateur">Opérateur</th>
+              <th data-sort="ministere">Ministère</th>
+              <th data-sort="programme">Programme</th>
+              <th class="num" data-sort="lfi">LFI 2026 (€)</th>
+              <th class="num" data-sort="plf">PLF 2027 (€)</th>
+              <th class="num" data-sort="delta">Δ €</th>
+              <th class="num" data-sort="evo">Δ %</th>
+              <th data-sort="cat">Catégorie</th>
+              <th class="num" data-sort="share">Poids</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>Source : data.economie.gouv.fr — API Explore v2.1 · Jeu de données « PLF 2027 - PAP Opérateurs - Subventions LFI N-1 et PLF N »</footer>
+
+<script>
+/* =========================================================
+   CONFIG
+   ========================================================= */
+const API_BASE = 'https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/plf-2027-pap-operateurs-subventions-lfi-n-1-et-plf-n/records';
+const PAGE_SIZE = 100;
+
+const fmtEUR = n => new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n||0);
+const fmtEURc = n => {
+  const abs = Math.abs(n);
+  if (abs >= 1e9) return (n/1e9).toFixed(2).replace('.',',') + ' Md€';
+  if (abs >= 1e6) return (n/1e6).toFixed(1).replace('.',',') + ' M€';
+  if (abs >= 1e3) return (n/1e3).toFixed(0) + ' k€';
+  return fmtEUR(n);
+};
+const fmtNum = n => new Intl.NumberFormat('fr-FR').format(n||0);
+const fmtPct = n => (n === null || n === undefined || Number.isNaN(n))
+  ? '—'
+  : (n >= 0 ? '+' : '') + n.toFixed(1).replace('.', ',') + ' %';
+const escapeHtml = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const tronquer = (s,n) => { s=String(s); return s.length>n ? s.slice(0,n-1)+'…' : s; };
+
+/* =========================================================
+   STATISTIQUES
+   ========================================================= */
+function median(arr){
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a,b)=>a-b);
+  const n = s.length;
+  return n%2 ? s[(n-1)/2] : (s[n/2-1]+s[n/2])/2;
+}
+function gini(values){
+  const v = values.filter(x=>x>=0).sort((a,b)=>a-b);
+  const n = v.length;
+  if (!n) return 0;
+  const sum = v.reduce((a,b)=>a+b,0);
+  if (!sum) return 0;
+  let cum = 0;
+  for (let i=0;i<n;i++) cum += (i+1)*v[i];
+  return (2*cum)/(n*sum) - (n+1)/n;
+}
+
+/* =========================================================
+   CHARGEMENT PAGINÉ
+   ========================================================= */
+async function chargerDonnees(){
+  const loading = document.getElementById('loading');
+  const erreur = document.getElementById('erreur');
+  try {
+    let all = [], offset = 0, total = null;
+    do {
+      const rep = await fetch(`${API_BASE}?limit=${PAGE_SIZE}&offset=${offset}`);
+      if (!rep.ok) throw new Error(`HTTP ${rep.status} — ${rep.statusText}`);
+      const data = await rep.json();
+      if (total === null){ total = data.total_count; document.getElementById('badgeTotal').textContent = `${total} lignes`; }
+      if (!data.results || !data.results.length) break;
+      all = all.concat(data.results);
+      offset += data.results.length;
+    } while (offset < total);
+
+    if (!all.length) throw new Error('Aucune donnée renvoyée par l\'API.');
+
+    // Nettoyage / typage
+    const clean = all.map(r => {
+      const lfi_sp = Number(r.lfi_n_1_ae_scsp_32)||0;
+      const plf_sp = Number(r.plf_n_ae_scsp_32)||0;
+      const lfi_inv = Number(r.lfi_n_1_ae_subv_inv_53)||0;
+      const plf_inv = Number(r.plf_n_ae_subv_inv_53)||0;
+      const lfi_tr = Number(r.lfi_n_1_ae_transferts_t6)||0;
+      const plf_tr = Number(r.plf_n_ae_transferts_t6)||0;
+      const lfi_dot = Number(r.lfi_n_1_ae_dot_fonds_propre_72)||0;
+      const plf_dot = Number(r.plf_n_ae_dot_fonds_propre_72)||0;
+      const delta = plf_sp - lfi_sp;
+      const evo = lfi_sp ? (delta/lfi_sp)*100 : (plf_sp > 0 ? null : 0);
+      let cat;
+      if (lfi_sp === 0 && plf_sp === 0) cat = 'stable';
+      else if (lfi_sp === 0 && plf_sp > 0) cat = 'nouveau';
+      else if (lfi_sp > 0 && plf_sp === 0) cat = 'supprime';
+      else if (Math.abs(evo) < 0.5) cat = 'stable';
+      else if (evo > 0) cat = 'hausse';
+      else cat = 'baisse';
+      return {
+        ...r, lfi_sp, plf_sp, lfi_inv, plf_inv, lfi_tr, plf_tr, lfi_dot, plf_dot,
+        lfi_total: lfi_sp + lfi_inv + lfi_tr + lfi_dot,
+        plf_total: plf_sp + plf_inv + plf_tr + plf_dot,
+        delta, evo, cat
+      };
+    });
+
+    // Poids relatif
+    const totalPlf = clean.reduce((s,r)=>s+r.plf_sp,0);
+    clean.forEach(r => r.share = totalPlf ? (r.plf_sp/totalPlf)*100 : 0);
+
+    // Stats globales
+    const stats = computeStats(clean, totalPlf);
+
+    // Rendu
+    renderInsights(clean, stats);
+    renderKPIs(clean, stats);
+    renderDistribution(clean);
+    renderPareto(clean);
+    renderGainersLosers(clean);
+    renderScatter(clean);
+    renderMinistry(clean);
+    renderTopOperators(clean);
+    renderMissions(clean);
+    renderPrograms(clean);
+    renderTable(clean);
+
+    // Afficher
+    ['insights','kpis','gridA','gridB','gridC','gridD','progSection','tableSection']
+      .forEach(id => document.getElementById(id).classList.remove('hidden'));
+    loading.classList.add('hidden');
+
+    // Listeners filtres table
+    ['recherche','filtreMin','filtreCat'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => filtrerTable(clean));
+      document.getElementById(id).addEventListener('change', () => filtrerTable(clean));
+    });
+    document.getElementById('exportCsvBtn').addEventListener('click', () => exporterCSV(clean));
+
+  } catch (e) {
+    console.error(e);
+    loading.classList.add('hidden');
+    erreur.classList.remove('hidden');
+    erreur.textContent = `❌ Impossible de charger les données : ${e.message}`;
+  }
+}
+
+/* =========================================================
+   STATS GLOBALES
+   ========================================================= */
+function computeStats(clean, totalPlf){
+  const totalLfi = clean.reduce((s,r)=>s+r.lfi_sp,0);
+  const delta = totalPlf - totalLfi;
+  const evo = totalLfi ? (delta/totalLfi)*100 : 0;
+  const evos = clean.filter(r=>r.evo !== null && r.cat !== 'nouveau').map(r=>r.evo);
+  const counts = { hausse:0, baisse:0, stable:0, nouveau:0, supprime:0 };
+  clean.forEach(r => counts[r.cat]++);
+  const top10 = [...clean].sort((a,b)=>b.plf_sp-a.plf_sp).slice(0,10);
+  const top10Share = totalPlf ? (top10.reduce((s,r)=>s+r.plf_sp,0)/totalPlf)*100 : 0;
+  const g = gini(clean.map(r=>r.plf_sp));
+  const med = median(evos);
+  const sorted = [...clean].sort((a,b)=>a.delta-b.delta);
+  const biggestLoser = sorted[0];
+  const biggestGainer = sorted[sorted.length-1];
+  return { totalPlf, totalLfi, delta, evo, counts, top10Share, gini:g, median:med, biggestLoser, biggestGainer, nbOps: clean.length };
+}
+
+/* =========================================================
+   INSIGHTS
+   ========================================================= */
+function renderInsights(clean, s){
+  const ul = document.getElementById('insightsList');
+  const lignes = [];
+
+  lignes.push(`<strong>${fmtNum(s.nbOps)}</strong> opérateurs · SCSP PLF 2027 : <span class="hl-blue">${fmtEUR(s.totalPlf)}</span> vs LFI 2026 : ${fmtEUR(s.totalLfi)} · évolution <span class="${s.evo>=0?'hl-green':'hl-red'}">${fmtPct(s.evo)}</span> (${fmtEURc(s.delta)})`);
+
+  lignes.push(`<span class="hl-green">🟢 ${s.counts.hausse} en hausse</span> · <span class="hl-red">🔴 ${s.counts.baisse} en baisse</span> · <span class="hl-or">⚪ ${s.counts.stable} stables</span> · 🆕 ${s.counts.nouveau} nouveaux · ❌ ${s.counts.supprime} supprimés`);
+
+  if (s.biggestGainer && s.biggestGainer.delta > 0){
+    const evoG = s.biggestGainer.evo;
+    const evoTxt = (evoG === null || evoG === undefined) ? 'nouveau' : fmtPct(evoG);
+    lignes.push(`<strong>Plus grande hausse :</strong> ${escapeHtml(s.biggestGainer.operateur)} <span class="hl-green">+${fmtEURc(s.biggestGainer.delta)} (${evoTxt})</span>`);
+  }
+  if (s.biggestLoser && s.biggestLoser.delta < 0){
+    const evo = s.biggestLoser.evo === null ? 'nouveau à zéro' : fmtPct(s.biggestLoser.evo);
+    lignes.push(`<strong>Plus grande baisse :</strong> ${escapeHtml(s.biggestLoser.operateur)} <span class="hl-red">${fmtEURc(s.biggestLoser.delta)} (${evo})</span>`);
+  }
+
+  lignes.push(`<strong>Concentration :</strong> top 10 opérateurs = <span class="hl-blue">${s.top10Share.toFixed(1).replace('.',',')} %</span> du budget SCSP · indice de Gini : <strong>${s.gini.toFixed(2).replace('.',',')}</strong>`);
+
+  lignes.push(`<strong>Médiane des évolutions :</strong> <span class="${s.median>=0?'hl-green':'hl-red'}">${fmtPct(s.median)}</span> — plus robuste que la moyenne (${fmtPct(s.evo)}), elle indique qu'un opérateur typique ${s.median>=0?'gagne':'perd'} des crédits`);
+
+  if (s.counts.supprime > 0){
+    const supprimes = clean.filter(r=>r.cat==='supprime');
+    const totalSupprime = supprimes.reduce((sum,r)=>sum+r.lfi_sp,0);
+    lignes.push(`<strong>${s.counts.supprime} opérateur(s) mis à zéro :</strong> ${fmtEURc(totalSupprime)} de crédits LFI 2026 disparaissent (dont ${supprimes.slice(0,3).map(r=>escapeHtml(r.operateur)).join(', ')}${supprimes.length>3?'…':''})`);
+  }
+
+  const hausseNb = clean.filter(r=>r.cat==='hausse').length;
+  const baisseNb = clean.filter(r=>r.cat==='baisse').length;
+  if (hausseNb && baisseNb){
+    const ratio = baisseNb/(hausseNb+baisseNb)*100;
+    lignes.push(`<strong>Pression :</strong> ${ratio.toFixed(0)} % des opérateurs en mouvement sont en baisse — le gouvernement cible ${baisseNb>hausseNb?'une majorité':'une minorité'} d'entités`);
+  }
+
+  ul.innerHTML = lignes.map(l=>`<li>${l}</li>`).join('');
+}
+
+/* =========================================================
+   KPI
+   ========================================================= */
+function renderKPIs(clean, s){
+  const kpis = [
+    { label:'Opérateurs', value: fmtNum(s.nbOps), sub:'lignes', cls:'' },
+    { label:'SCSP PLF 2027', value: fmtEURc(s.totalPlf), sub:'AE', cls:'rouge' },
+    { label:'SCSP LFI 2026', value: fmtEURc(s.totalLfi), sub:'AE', cls:'or' },
+    { label:'Évolution', value: fmtPct(s.evo), sub: fmtEURc(s.delta), cls: s.evo>=0?'vert':'rouge' },
+    { label:'Médiane évol.', value: fmtPct(s.median), sub:'robuste', cls: s.median>=0?'vert':'rouge' },
+    { label:'En hausse', value: fmtNum(s.counts.hausse), sub:'opérateurs', cls:'vert' },
+    { label:'En baisse', value: fmtNum(s.counts.baisse), sub:'opérateurs', cls:'rouge' },
+    { label:'Supprimés', value: fmtNum(s.counts.supprime), sub:'mis à zéro', cls:'rouge' },
+    { label:'Top 10 poids', value: s.top10Share.toFixed(1).replace('.',',')+' %', sub:'du budget', cls:'violet' },
+    { label:'Gini', value: s.gini.toFixed(2).replace('.',','), sub:'concentration', cls:'cyan' }
+  ];
+  document.getElementById('kpis').innerHTML = kpis.map(k =>
+    `<div class="kpi ${k.cls}"><div class="label">${k.label}</div><div class="value">${k.value}</div><div class="sub">${k.sub}</div></div>`
+  ).join('');
+}
+
+/* =========================================================
+   GRAPHIQUES
+   ========================================================= */
+const PALETTE = ['#000091','#E1000F','#00a95f','#ffb800','#a855f7','#06b6d4','#f97316','#6366f1','#ec4899','#14b8a6'];
+
+function renderDistribution(clean){
+  const buckets = [
+    { label:'< -50 %', test:r=>r.cat==='supprime'||(r.evo!==null&&r.evo<-50), color:'#7a0008' },
+    { label:'-50 à -20 %', test:r=>r.evo!==null&&r.evo<-20&&r.evo>=-50, color:'#E1000F' },
+    { label:'-20 à -5 %', test:r=>r.evo!==null&&r.evo<-5&&r.evo>=-20, color:'#ff6b6b' },
+    { label:'-5 à -0,5 %', test:r=>r.evo!==null&&r.evo<-0.5&&r.evo>=-5, color:'#ffb1b1' },
+    { label:'Stable (±0,5 %)', test:r=>r.cat==='stable', color:'#929292' },
+    { label:'+0,5 à +5 %', test:r=>r.evo!==null&&r.evo>=0.5&&r.evo<=5, color:'#90d5a8' },
+    { label:'+5 à +20 %', test:r=>r.evo!==null&&r.evo>5&&r.evo<=20, color:'#00a95f' },
+    { label:'+20 à +50 %', test:r=>r.evo!==null&&r.evo>20&&r.evo<=50, color:'#18753c' },
+    { label:'> +50 %', test:r=>r.evo!==null&&r.evo>50, color:'#0d4a24' },
+    { label:'🆕 Nouveaux', test:r=>r.cat==='nouveau', color:'#000091' }
+  ];
+  const counts = buckets.map(b => clean.filter(b.test).length);
+  new Chart(document.getElementById('chartDistrib'), {
+    type:'bar',
+    data:{
+      labels: buckets.map(b=>b.label),
+      datasets:[{ data: counts, backgroundColor: buckets.map(b=>b.color), borderRadius:4 }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ callbacks:{ label: ctx => `${ctx.raw} opérateur(s)` } }
+      },
+      scales:{
+        x:{ ticks:{ font:{size:9}, maxRotation:45, minRotation:45 }, grid:{display:false} },
+        y:{ beginAtZero:true, ticks:{ font:{size:10} }, grid:{color:'#eee'} }
+      }
+    }
+  });
+}
+
+function renderPareto(clean){
+  const sorted = [...clean].sort((a,b)=>b.plf_sp-a.plf_sp);
+  const total = sorted.reduce((s,r)=>s+r.plf_sp,0);
+  let cum = 0;
+  const cumPct = sorted.map(r => { cum += r.plf_sp; return total ? cum/total*100 : 0; });
+  const labels = sorted.map((_,i)=>i+1);
+  const step = Math.max(1, Math.floor(sorted.length/50));
+  const idx = labels.filter((_,i)=>i%step===0 || i===sorted.length-1);
+  new Chart(document.getElementById('chartPareto'), {
+    type:'line',
+    data:{
+      labels: idx.map(i=>i),
+      datasets:[{
+        label:'% cumulé du budget',
+        data: idx.map(i=>cumPct[i-1]),
+        borderColor:'#000091',
+        backgroundColor:'rgba(0,0,145,.1)',
+        fill:true, tension:.2, pointRadius:0, borderWidth:2
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ callbacks:{ label: ctx => `Top ${ctx.label} : ${ctx.raw.toFixed(1)} % du budget` } }
+      },
+      scales:{
+        x:{ title:{display:true,text:'Rang opérateur',font:{size:10}}, ticks:{font:{size:9}}, grid:{display:false} },
+        y:{ beginAtZero:true, max:100, ticks:{ callback: v=>v+'%', font:{size:9} }, grid:{color:'#eee'} }
+      }
+    }
+  });
+}
+
+function renderGainersLosers(clean){
+  const topG = [...clean].sort((a,b)=>b.delta-a.delta).slice(0,10);
+  const topL = [...clean].sort((a,b)=>a.delta-b.delta).slice(0,10);
+
+  new Chart(document.getElementById('chartGainers'), {
+    type:'bar',
+    data:{
+      labels: topG.map(r=>tronquer(r.operateur,22)),
+      datasets:[{ data: topG.map(r=>r.delta), backgroundColor:'#00a95f', borderRadius:4 }]
+    },
+    options: barOptions(true, r=>topG[r].lfi_sp > 0 ? topG[r].evo : null)
+  });
+
+  new Chart(document.getElementById('chartLosers'), {
+    type:'bar',
+    data:{
+      labels: topL.map(r=>tronquer(r.operateur,22)),
+      datasets:[{ data: topL.map(r=>r.delta), backgroundColor:'#E1000F', borderRadius:4 }]
+    },
+    options: barOptions(true, r=>topL[r].lfi_sp > 0 ? topL[r].evo : null)
+  });
+}
+
+function barOptions(horizontal, evoGetter){
+  return {
+    indexAxis: horizontal ? 'y' : 'x',
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        callbacks:{
+          label: ctx => {
+            const evo = evoGetter ? evoGetter(ctx.dataIndex) : null;
+            return [`Δ : ${fmtEURc(ctx.raw)}`, evo!==null ? `Évolution : ${fmtPct(evo)}` : 'Évolution : —'];
+          }
+        }
+      }
+    },
+    scales:{
+      x: horizontal
+        ? { beginAtZero:true, ticks:{ callback: v=>fmtEURc(v), font:{size:9} }, grid:{color:'#eee'} }
+        : { beginAtZero:true, ticks:{ font:{size:9}, maxRotation:45 }, grid:{display:false} },
+      y: horizontal
+        ? { ticks:{ font:{size:10} }, grid:{display:false} }
+        : { beginAtZero:true, ticks:{ callback: v=>fmtEURc(v), font:{size:9} }, grid:{color:'#eee'} }
+    }
+  };
+}
+
+function renderScatter(clean){
+  const filtered = clean.filter(r => r.lfi_sp > 0 && r.plf_sp > 0);
+  const maxVal = Math.max(...filtered.map(r=>Math.max(r.lfi_sp, r.plf_sp)), 1);
+  const data = filtered.map(r => ({
+    x: Math.max(r.lfi_sp, 1),
+    y: Math.max(r.plf_sp, 1),
+    nom: r.operateur,
+    lfi: r.lfi_sp,
+    plf: r.plf_sp,
+    evo: r.evo,
+    cat: r.cat,
+    r: 3 + 10 * Math.sqrt(r.plf_sp/maxVal)
+  }));
+  const colors = data.map(d => d.cat === 'hausse' ? '#00a95f' : d.cat === 'baisse' ? '#E1000F' : '#929292');
+  new Chart(document.getElementById('chartScatter'), {
+    type:'scatter',
+    data:{
+      datasets:[{
+        data,
+        backgroundColor: colors,
+        borderColor: colors.map(c=>c+'99'),
+        borderWidth:1,
+        pointRadius: data.map(d=>d.r),
+        pointHoverRadius: data.map(d=>d.r+3)
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label: ctx => {
+              const d = ctx.raw;
+              return [
+                d.nom,
+                `LFI 2026 : ${fmtEURc(d.lfi)}`,
+                `PLF 2027 : ${fmtEURc(d.plf)}`,
+                `Évolution : ${fmtPct(d.evo)}`
+              ];
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          type:'logarithmic',
+          title:{display:true,text:'LFI 2026 (€, échelle log)',font:{size:10}},
+          ticks:{ callback: v => v >= 1e6 ? (v/1e6)+'M' : v >= 1e3 ? (v/1e3)+'k' : v, font:{size:9} },
+          grid:{color:'#eee'}
+        },
+        y:{
+          type:'logarithmic',
+          title:{display:true,text:'PLF 2027 (€, échelle log)',font:{size:10}},
+          ticks:{ callback: v => v >= 1e6 ? (v/1e6)+'M' : v >= 1e3 ? (v/1e3)+'k' : v, font:{size:9} },
+          grid:{color:'#eee'}
+        }
+      }
+    }
+  });
+}
+
+function renderMinistry(clean){
+  const map = {};
+  for (const r of clean){
+    const k = r.ministere || '(non renseigné)';
+    if (!map[k]) map[k] = { lfi:0, plf:0, count:0 };
+    map[k].lfi += r.lfi_sp;
+    map[k].plf += r.plf_sp;
+    map[k].count++;
+  }
+  const arr = Object.entries(map)
+    .map(([k,v]) => ({ label:k, ...v, evo: v.lfi ? ((v.plf-v.lfi)/v.lfi)*100 : 0, delta: v.plf-v.lfi }))
+    .filter(x => x.lfi > 0)
+    .sort((a,b) => a.evo - b.evo);
+  const baisses = arr.slice(0,6);
+  const hausses = arr.slice(-6).reverse();
+  const sel = [...baisses, ...hausses];
+  new Chart(document.getElementById('chartMinist'), {
+    type:'bar',
+    data:{
+      labels: sel.map(x=>tronquer(x.label,28)),
+      datasets:[{
+        data: sel.map(x=>x.evo),
+        backgroundColor: sel.map(x=>x.evo < 0 ? '#E1000F' : '#00a95f'),
+        borderRadius:4
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label: ctx => {
+              const x = sel[ctx.dataIndex];
+              return [`Évolution : ${fmtPct(x.evo)}`, `PLF : ${fmtEURc(x.plf)}`, `Δ : ${fmtEURc(x.delta)}`, `${x.count} opérateur(s)`];
+            }
+          }
+        }
+      },
+      scales:{
+        x:{ ticks:{ callback: v=>v+'%', font:{size:9} }, grid:{color:'#eee'} },
+        y:{ ticks:{ font:{size:9} }, grid:{display:false} }
+      }
+    }
+  });
+}
+
+function renderTopOperators(clean){
+  const top = [...clean].sort((a,b)=>b.plf_sp-a.plf_sp).slice(0,10);
+  new Chart(document.getElementById('chartOp'), {
+    type:'bar',
+    data:{
+      labels: top.map(r=>tronquer(r.operateur,26)),
+      datasets:[{ data: top.map(r=>r.plf_sp), backgroundColor:'#000091', borderRadius:4 }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ callbacks:{ label: ctx => `${fmtEUR(ctx.raw)} (${top[ctx.dataIndex].share.toFixed(2)} % du total)` } }
+      },
+      scales:{
+        x:{ ticks:{ callback:v=>fmtEURc(v), font:{size:9} }, grid:{color:'#eee'} },
+        y:{ ticks:{ font:{size:10} }, grid:{display:false} }
+      }
+    }
+  });
+}
+
+function renderMissions(clean){
+  const map = {};
+  for (const r of clean){
+    const k = r.mission || '(non renseignée)';
+    map[k] = (map[k]||0) + r.plf_sp;
+  }
+  const arr = Object.entries(map).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value).slice(0,8);
+  new Chart(document.getElementById('chartMission'), {
+    type:'doughnut',
+    data:{
+      labels: arr.map(x=>tronquer(x.label,30)),
+      datasets:[{ data: arr.map(x=>x.value), backgroundColor: PALETTE }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'bottom', labels:{ font:{size:10}, padding:8 } },
+        tooltip:{ callbacks:{ label: ctx => `${fmtEURc(ctx.raw)}` } }
+      }
+    }
+  });
+}
+
+function renderPrograms(clean){
+  const map = {};
+  for (const r of clean){
+    const k = `${r.programme||'?'} · ${r.libelle_programme||'—'}`;
+    if (!map[k]) map[k] = { lfi:0, plf:0 };
+    map[k].lfi += r.lfi_sp;
+    map[k].plf += r.plf_sp;
+  }
+  const arr = Object.entries(map)
+    .map(([k,v]) => ({ label:k, delta: v.plf - v.lfi, lfi: v.lfi, plf: v.plf }))
+    .sort((a,b) => a.delta - b.delta);
+  const sel = [...arr.slice(0,10), ...arr.slice(-10).reverse()];
+  new Chart(document.getElementById('chartProg'), {
+    type:'bar',
+    data:{
+      labels: sel.map(x=>tronquer(x.label,50)),
+      datasets:[{
+        data: sel.map(x=>x.delta),
+        backgroundColor: sel.map(x=>x.delta < 0 ? '#E1000F' : '#00a95f'),
+        borderRadius:4
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label: ctx => {
+              const x = sel[ctx.dataIndex];
+              return [`Δ : ${fmtEURc(x.delta)}`, `LFI : ${fmtEURc(x.lfi)}`, `PLF : ${fmtEURc(x.plf)}`];
+            }
+          }
+        }
+      },
+      scales:{
+        x:{ ticks:{ callback:v=>fmtEURc(v), font:{size:9} }, grid:{color:'#eee'} },
+        y:{ ticks:{ font:{size:8.5} }, grid:{display:false} }
+      }
+    }
+  });
+}
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+let currentSort = { key: 'plf', dir: 'desc' };
+let currentClean = [];
+
+function renderTable(clean){
+  currentClean = clean;
+  const mins = [...new Set(clean.map(r=>r.ministere).filter(Boolean))].sort();
+  document.getElementById('filtreMin').innerHTML = '<option value="">Tous les ministères</option>' +
+    mins.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sort;
+      if (currentSort.key === key) currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+      else currentSort = { key, dir: key==='operateur'||key==='ministere'||key==='programme'||key==='cat' ? 'asc' : 'desc' };
+      filtrerTable(clean);
+    });
+  });
+
+  filtrerTable(clean);
+}
+
+function getSortValue(r, key){
+  switch(key){
+    case 'operateur': return r.operateur || '';
+    case 'ministere': return r.ministere || '';
+    case 'programme': return r.programme || '';
+    case 'lfi': return r.lfi_sp;
+    case 'plf': return r.plf_sp;
+    case 'delta': return r.delta;
+    case 'evo': return r.evo === null ? -Infinity : r.evo;
+    case 'cat': return r.cat;
+    case 'share': return r.share;
+    default: return 0;
+  }
+}
+
+function filtrerTable(clean){
+  const q = document.getElementById('recherche').value.toLowerCase().trim();
+  const min = document.getElementById('filtreMin').value;
+  const cat = document.getElementById('filtreCat').value;
+
+  let rows = clean.filter(r => {
+    if (min && r.ministere !== min) return false;
+    if (cat && r.cat !== cat) return false;
+    if (q){
+      const hay = [r.operateur, r.ministere, r.programme, r.libelle_programme, r.mission].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  rows.sort((a,b) => {
+    const va = getSortValue(a, currentSort.key);
+    const vb = getSortValue(b, currentSort.key);
+    if (typeof va === 'string') return currentSort.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+    return currentSort.dir === 'asc' ? va-vb : vb-va;
+  });
+
+  document.getElementById('tableCount').textContent = `${rows.length} opérateur(s)`;
+
+  const catLabel = { hausse:'🟢 Hausse', baisse:'🔴 Baisse', stable:'⚪ Stable', nouveau:'🆕 Nouveau', supprime:'❌ Supprimé' };
+  const catClass = { hausse:'cat-hausse', baisse:'cat-baisse', stable:'cat-stable', nouveau:'cat-nouveau', supprime:'cat-supprime' };
+
+  document.getElementById('tbody').innerHTML = rows.map(r => {
+    const evoTxt = r.evo === null ? '—' : fmtPct(r.evo);
+    const evoClass = r.evo === null ? '' : (r.evo > 0 ? 'evolution-pos' : r.evo < 0 ? 'evolution-neg' : '');
+    const deltaClass = r.delta > 0 ? 'evolution-pos' : r.delta < 0 ? 'evolution-neg' : '';
+    return `<tr>
+      <td><strong>${escapeHtml(r.operateur)}</strong></td>
+      <td>${escapeHtml(r.ministere||'—')}</td>
+      <td><span style="font-family:var(--font-mono);font-size:10.5px">${escapeHtml(r.programme||'—')}</span> · ${escapeHtml(r.libelle_programme||'—')}</td>
+      <td class="num">${fmtEUR(r.lfi_sp)}</td>
+      <td class="num">${fmtEUR(r.plf_sp)}</td>
+      <td class="num ${deltaClass}">${r.delta ? (r.delta>0?'+':'')+fmtEURc(r.delta) : '—'}</td>
+      <td class="num ${evoClass}">${evoTxt}</td>
+      <td><span class="cat-badge ${catClass[r.cat]}">${catLabel[r.cat]}</span></td>
+      <td class="num">${r.share.toFixed(2).replace('.',',')} %</td>
+    </tr>`;
+  }).join('');
+}
+
+/* =========================================================
+   EXPORT CSV
+   ========================================================= */
+function exporterCSV(clean){
+  const cols = ['Opérateur','Ministère','Programme','Libellé programme','Mission',
+    'LFI 2026 SCSP (€)','PLF 2027 SCSP (€)','Δ €','Δ %','Catégorie','Poids %',
+    'LFI 2026 Invest (€)','PLF 2027 Invest (€)','LFI 2026 Transferts (€)','PLF 2027 Transferts (€)','LFI 2026 Dotations (€)','PLF 2027 Dotations (€)'];
+  const esc = v => {
+    const s = String(v ?? '');
+    return /[",;\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  };
+  const lines = [cols.join(';')];
+  clean.forEach(r => {
+    lines.push([
+      esc(r.operateur), esc(r.ministere), esc(r.programme), esc(r.libelle_programme), esc(r.mission),
+      r.lfi_sp, r.plf_sp, r.delta, r.evo===null?'':r.evo.toFixed(2), r.cat, r.share.toFixed(3),
+      r.lfi_inv, r.plf_inv, r.lfi_tr, r.plf_tr, r.lfi_dot, r.plf_dot
+    ].join(';'));
+  });
+  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'plf2027-operateurs-analyse.csv';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+chargerDonnees();
+</script>
+</body>
+</html>
